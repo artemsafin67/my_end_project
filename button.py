@@ -18,7 +18,7 @@ class Button:
         self.bg_color = bg_color
         self.border_color = border_color
 
-        # Функция для запуска по нажатю кнопки
+        # Функция для запуска по нажатию кнопки
         self.func = func
         self.args = args
 
@@ -31,7 +31,8 @@ class Button:
     def check(self, x, y):
         """Проверка на нажатие кнопки"""
         if self.rect.collidepoint(x, y):
-            self.func(*self.args)
+            if self.func:  # Если у кнопки есть функция
+                self.func(*self.args)  # Запуск функции
             return True
 
     def draw_button(self):
@@ -42,7 +43,3 @@ class Button:
             pygame.draw.lines(self.screen, self.border_color, True,
                               [(self.x, self.y), (self.x + self.width, self.y),
                                (self.x + self.width, self.y + self.height), (self.x, self.y + self.height)])
-
-
-
-

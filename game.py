@@ -1,12 +1,26 @@
-def game(screen, width, height):
+def game(screen, settings):
+    """Функция, которая запускает игру"""
     import pygame
     from figure import Figure
     from board import Board
     from random import choice
+    import sys
 
     pygame.init()
 
-    def terminate():
+    width, height = 1200, 600
+
+    # Читаем правила и определяем глобальные параметры
+    for opt, key in settings.items():
+        if opt == 'music':
+            if key == 'Да':
+                play_music = True
+            else:
+                play_music = False
+
+        # Other options
+
+    def terminate(kill=False):
         """Выход из программы"""
         nonlocal running
 
@@ -17,7 +31,9 @@ def game(screen, width, height):
             new.close()
 
         running = False
-
+        if kill:
+            pygame.quit()
+            sys.exit()
 
     def update_display():
         """Обновление игрового поля"""
@@ -73,10 +89,18 @@ def game(screen, width, height):
                                                              y - 1]  # Она поднимается вверх, т.е. приближается к верху
                         figure.top += 1  # Опускаем низ на один элемент
 
-        current_score = str(int(current_score) + len(to_del) ** 2 * 10)
+        # В зависимости от количества удаленных линий зачисляем пользователю очки
+        if len(to_del) == 1:
+            current_score = str(int(current_score) + 10)
+        if len(to_del) == 2:
+            current_score = str(int(current_score) + 30)
+        if len(to_del) == 3:
+            current_score = str(int(current_score) + 60)
+        if len(to_del) == 4:
+            current_score = str(int(current_score) + 100)
 
-        # Проигрываем мелолию
-        if to_del:
+        # Проигрываем мелолию, если параметр play_music стоит в позиции True
+        if to_del and play_music:
             ended_string_sound.play()
 
         for el in to_del:  # Удаляем заполненные строки и добавляем пустые сверху
@@ -87,26 +111,33 @@ def game(screen, width, height):
         """Проверка на проигрыш"""
 
         if 1 in board.field[0]:  # Если часть фигуры содержится на верхней линии
-            # Проигрываем мелодии
-            lose_sound.play()
-            pygame.mixer.music.stop()
 
+            # Проигрываем мелодии
+            if play_music:
+                lose_sound.play()
+                pygame.mixer.music.stop()
+
+            # Выводим сообщение о проигрыше
             lose_font = pygame.font.Font(None, 150)
             lose_label = lose_font.render('You lost!', 1, pygame.Color('pink'))
 
             screen.blit(lose_label, (width // 2 - 200, height // 2 - 100))
             pygame.display.update()
 
+            # Если мы побили рекорд, то обновляем его
             if int(record) < int(current_score):
                 record_file.close()
-                new = open('record.txt', 'w')
-                new.write(current_score)
-                new.close()
+                new_record_file = open('record.txt', 'w')
+                new_record_file.write(current_score)
+                new_record_file.close()
 
+            # Ждём 6 секунд для проигрывания мелодии
             pygame.time.delay(6000)
             terminate()
 
     def manage_with_event(event):
+        # В зависимости от типа события двигаем фигуру
+
         if event.key == pygame.K_LEFT:  # Двигаем фигуру влево
             current_figure.move_left()
             update_display()
@@ -141,8 +172,10 @@ def game(screen, width, height):
     figure_down_sound = pygame.mixer.Sound('sounds/figure_down.wav')
     ended_string_sound = pygame.mixer.Sound('sounds/ended_string.wav')
     pygame.mixer.music.load('sounds/background_music.mp3')
-    pygame.mixer.music.play(-1)
-    pygame.mixer.music.set_volume(0.25)
+
+    if play_music:
+        pygame.mixer.music.play(-1)
+        pygame.mixer.music.set_volume(0.25)
 
     # Создаём образцы фигур
     square = Figure(2, 2, pygame.Color('yellow'), board.size, [(0, 0), (1, 0), (0, 1), (1, 1)], board, screen)
@@ -179,32 +212,37 @@ def game(screen, width, height):
     while running:  # Основной игровой цикл
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                terminate()
+                terminate(True)
 
             if event.type == pygame.KEYDOWN:
                 manage_with_event(event)
 
         if frames_done >= 200:  # Каждые 200 итераций обновляем картинку
 
-            if not current_figure.move():  # Если мы не можем никуда пойти, то появляется новая фигура
-                used_figures.append(current_figure)
-                let_next_figure = True
-                figure_down_sound.play()  # Проигрываем звук
+            # Если мы не можем никуда пойти, то появляется новая фигура
+            if not (current_figure.can_move and current_figure.move()):
+                used_figures.append(current_figure)  # Добавляем фигуру в список для отрисовки
+                let_next_figure = True  # Ждём новую фигуру
 
-                figure_added += 1
-                if figure_added % int(current_level) ** 2 == 0:  # Увеличиваем уровень
+                # Проигрываем мелодию
+                if play_music:
+                    figure_down_sound.play()
+
+                figure_added += 1  # Количество фигур увеличивается
+                current_score = str(int(current_score) + 1)  # За каждую фигуру + одно очко
+
+                if figure_added % int(current_level) ** 2 == 0:  # Увеличиваем уровень через определенное число фигур
                     current_level = str(int(current_level) + 1)
                     figure_added = 0
 
             check_field()  # Проверка на заполнение линии фигурами
             update_display()  # Обновление экрана
             check_to_lose()  # Проверка на проигрыш
-            frames_done = 0
+            frames_done = 0  # Заново начинаем отсчёт кадров
 
-        if let_next_figure:
-            current_figure = choice(possible_figures).copy()
-            let_next_figure = False
-            update_display()
+        if let_next_figure:  # Добавляем новую фигуру
+            current_figure = choice(possible_figures).copy()  # Выбираем фигуру
+            let_next_figure = False  # Не ждём новую фигуру
 
-        clock.tick(fps)
-        frames_done += int(current_level)
+        clock.tick(fps)  # Следим на контролем времени
+        frames_done += int(current_level)  # С каждым уровнем число кадров увеличивается на большее число

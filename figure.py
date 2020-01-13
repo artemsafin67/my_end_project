@@ -25,7 +25,8 @@ class Figure:
 
     def copy(self):
         """Копирует себя, но с верхним углом в позиции -2 (для постепенного вывода фигуры на экран)"""
-        return Figure(self.width, self.height, self.color, self.size, self.chosen_points, self.board, self.screen)
+        return Figure(self.width, self.height, self.color, self.size, self.chosen_points, self.board,
+                      self.screen)
 
     def rotate_to_left(self):
         """Поворачивает фигуру на 90 градусов против часовой стрелки"""
@@ -43,7 +44,7 @@ class Figure:
                     self.board.field[y + self.top][x + self.left]:
                 return False
 
-        self.field, self.chosen_points = field, chosen_points
+        self.field, self.chosen_points = field, chosen_points  # Обновляем собственные переменные
 
         # Поле перевернули, то есть ширина и высота должны поменяться местами
         self.width, self.height = self.height, self.width
@@ -69,7 +70,8 @@ class Figure:
         self.width, self.height = self.height, self.width
 
     def move(self):
-        if self.collide():
+        """На каждом ходу двигаемся вниз"""
+        if self.collide():  # Если мы сталкиваемся с чем-то, то мы не можем двигаться
             return False
 
         self.top += 1
