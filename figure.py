@@ -105,6 +105,15 @@ class Figure:
                 y1 = (self.top + coord[1] + self.board.top_space) * self.size
                 pygame.draw.rect(self.screen, self.color, [x1, y1, self.size, self.size])
 
+    def draw_next_in_the_rect(self, x_space, y_space):
+        """Вывод фигуры на экран в качестве следующей фигуры"""
+
+        for coord in self.chosen_points:
+            pygame.draw.rect(self.screen, self.color,
+                             [x_space + coord[0] * self.size,
+                              y_space + coord[1] * self.size,
+                              self.size, self.size])
+
     def collide(self):
         if self.top + self.height >= self.board.height:  # Если фигура достигла дна поля
 

@@ -48,8 +48,13 @@ def game(screen, settings):
 
         # Рисуем текущие результаты
         x_coord = (board.left_space + board.width) * board.size + 50
-        screen.blit(record_label, (x_coord, 80))
-        screen.blit(current_score_label, (x_coord, 270))
+
+        figure_to_draw.draw_next_in_the_rect(x_coord + 75, board.size * 2)
+        board_to_draw_figure_on = Board(figure_to_draw.width, figure_to_draw.height,
+                                        figure_to_draw.size, x_coord + 75, board.size * 2, figure_to_draw.screen, True)
+        board_to_draw_figure_on.draw()
+        screen.blit(record_label, (x_coord, 210))
+        screen.blit(current_score_label, (x_coord, 330))
         screen.blit(current_level_label, (x_coord, 450))
 
         # Рисуем использованные фигуры
@@ -206,6 +211,7 @@ def game(screen, settings):
     let_next_figure = False  # Флаг, обозначающий возможность запустить новую фигуру
 
     current_figure = choice(possible_figures).copy()  # Выбираем текущую фигуру
+    figure_to_draw = choice(possible_figures).copy()  # Выбираем фигуру для отрисовки в отдельной части экрана
     update_display()
 
     running = True
@@ -241,7 +247,8 @@ def game(screen, settings):
             frames_done = 0  # Заново начинаем отсчёт кадров
 
         if let_next_figure:  # Добавляем новую фигуру
-            current_figure = choice(possible_figures).copy()  # Выбираем фигуру
+            current_figure = figure_to_draw  # Обновляем новую фигуру
+            figure_to_draw = choice(possible_figures).copy()  # Выбираем фигуру для отрисовки
             let_next_figure = False  # Не ждём новую фигуру
 
         clock.tick(fps)  # Следим на контролем времени

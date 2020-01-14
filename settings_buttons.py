@@ -1,21 +1,21 @@
 from button import Button
+import pygame
 
 
-class SettingsButton(Button):
-    def __init__(self, func, x, y, width, height, text, var, options, size, color,
-                 screen, *args, bg_color=None, border_color=None):
+class SettingsButtonWithOptions(Button):
+    """Реализует класс кнопки с выбором опций"""
 
-        super().__init__(func, x, y, width, height, text + ': ' + var, size, color,
+    def __init__(self, func, x, y, width, height, setting, current_var, options, size, color,
+                 screen, *args, parameter_for_file, bg_color=None, border_color=None):
+
+        super().__init__(func, x, y, width, height, setting + ': ' + current_var, size, color,
                          screen, *args, bg_color=bg_color, border_color=border_color)
 
         self.options = options  # Массив с опциями
-        self.setting = text  # Настройка конкретной опции
-        self.current_option = self.options.index(var)  # Индекс опции
+        self.setting = setting  # Настройка конкретной опции
+        self.current_option = self.options.index(current_var)  # Индекс опции
 
-    def change_text(self, text):
-        # Меняем текст кнопки по заданному значению параметра
-        self.text = self.setting + ': ' + text
-        self.label = self.font.render(self.text, 1, self.color, self.bg_color)
+        self.parameter_for_file = parameter_for_file  # Параметр  задаваемого значения для записи в файл
 
     def select_option(self, is_down):
         """Изменяем текущую опцию по нажатию клавиш UP и DOWN"""
@@ -25,6 +25,49 @@ class SettingsButton(Button):
         else:
             self.current_option = (self.current_option - 1) % len(self.options)
 
-        self.change_text(self.options[self.current_option])
+        self.change_text(self.setting, self.options[self.current_option])
+
+    def manage_event(self, event):
+        # Разбираемся с типом событий
+
+        if event.key == pygame.K_DOWN:
+            self.select_option(True)
+        if event.key == pygame.K_UP:
+            self.select_option(False)
+
+
+class SettingsButtonWithTextEnter(Button):
+    """Реализует класс кнопки с вводом значения"""
+
+    def __init__(self, func, x, y, width, height, setting, current_var, size, color,
+                 screen, *args, parameter_for_file, bg_color=None, border_color=None):
+
+        super().__init__(func, x, y, width, height, setting + ':' + current_var, size, color,
+                         screen, *args, bg_color=bg_color, border_color=border_color)
+
+        self.current_var = current_var  # Текущее введенное значение
+        self.setting = setting  # Параметр по которому идет настройка
+
+        self.parameter_for_file = parameter_for_file  # Параметр для записи в файл
+
+    def change_option(self, symbol, need_to_add):
+        # Изменяем текущее значение по нажатие клавиши
+
+        if need_to_add:  # Если надо добавить символ
+            self.current_var += symbol
+            self.change_text(self.setting, self.current_var)
+
+        else:  # Если надо убрать символ
+            if self.current_var:
+                self.current_var = self.current_var[:-1]
+                self.change_text(self.setting, self.current_var)
+
+    def manage_event(self, event):
+        if event.key == pygame.K_BACKSPACE:
+            self.change_option('', False)
+        else:
+            self.change_option(event.unicode, True)
+
+
 
 

@@ -1,17 +1,30 @@
-def settings(screen, background_image):
-    from settings_buttons import SettingsButton
-    import pygame
-    import sys
+from settings_buttons import SettingsButtonWithOptions, SettingsButtonWithTextEnter
+import pygame
+import sys
 
+
+def settings(screen, background_image):
     global buttons
 
-    settings_config = read_settings()  # Тут хранятся настройки
+    settings_config = read_settings()  # Тут хранятся ранее сохраненные настройки
 
     # Создаём кнопки-настройщики
-    music_is_on = SettingsButton(None, 300, 100, 600, 40, 'Включить звуковые эффекты', settings_config['music'],
-                                 ['Да', 'Нет'], 50, pygame.Color('pink'), screen, border_color=pygame.Color('white'))
+    music_is_on = SettingsButtonWithOptions(func=None, x=300, y=100, width=600, height=40,
+                                            setting='Включить звуковые эффекты',
+                                            current_var=settings_config['music'],
+                                            options=['Да', 'Нет'], size=50,
+                                            color=pygame.Color('pink'), screen=screen,
+                                            parameter_for_file='music',
+                                            border_color=pygame.Color('white'))
 
-    buttons = [music_is_on]  # Список кнопок-настройщиков
+    username = SettingsButtonWithTextEnter(func=None, x=300, y=200, width=600, height=40,
+                                           setting='Имя пользователя',
+                                           current_var=settings_config['username'],
+                                           size=50, color=pygame.Color('pink'),
+                                           screen=screen, parameter_for_file='username',
+                                           border_color=pygame.Color('white'))
+
+    buttons = [music_is_on, username]  # Список кнопок-настройщиков
 
     # Выводим все кнопки на экран
     screen.blit(background_image, (0, 0))
@@ -35,18 +48,14 @@ def settings(screen, background_image):
                     if button.check(*event.pos):  # Если мы нажали на какую-то кнопку
                         chosen_button = button
                         found = True
-                        continue
+                        break
 
                 if not found:  # Если мы не выбрали кнопку, то завершаем цикл
                     save_changes()
                     running = False
 
             if event.type == pygame.KEYDOWN:
-                # Нажатие влияет только если есть выбранная кнопка
-                if event.key == pygame.K_DOWN and chosen_button:
-                    chosen_button.select_option(True)
-                if event.key == pygame.K_UP and chosen_button:
-                    chosen_button.select_option(False)
+                chosen_button.manage_event(event)
 
                 # Обновляем экран, так как настройки и текст изменились (возможно)
                 screen.blit(background_image, (0, 0))
@@ -78,10 +87,12 @@ def save_changes():
 
     # Заполняем настройки
     for button in buttons:
-        if button.options[button.current_option] == 'Да':
-            settings_config['music'] = 'Да'
-        else:
-            settings_config['music'] = 'Нет'
+        if isinstance(button, SettingsButtonWithOptions):
+            settings_config[button.parameter_for_file] = \
+                button.options[button.current_option]
+
+        if isinstance(button, SettingsButtonWithTextEnter):
+            settings_config[button.parameter_for_file] = button.current_var
 
     # Заполняем файл для записи настроек
     settings_config_file = open('settings_config.txt', mode='w', encoding='utf-8')
@@ -90,5 +101,3 @@ def save_changes():
         settings_config_file.write('{}:{}\n'.format(a, b))
 
     settings_config_file.close()
-
-

@@ -28,6 +28,11 @@ class Button:
         self.font = pygame.font.Font(None, self.size)
         self.label = self.font.render(self.text, 1, self.color, self.bg_color)
 
+    def change_text(self, setting, meaning):
+        # Меняем текст кнопки по заданному значению параметра
+        self.text = setting + ': ' + meaning
+        self.label = self.font.render(self.text, 1, self.color, self.bg_color)
+
     def check(self, x, y):
         """Проверка на нажатие кнопки"""
         if self.rect.collidepoint(x, y):
