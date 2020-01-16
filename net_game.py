@@ -1,10 +1,12 @@
-def game(screen, settings):
+def net_game(screen, settings):
     """Функция, которая запускает игру"""
     import pygame
     from figure import Figure
     from board import Board
     from random import choice
+    from client import MessageSenderAndReceiver
     import sys
+    import threading
 
     pygame.init()
 
@@ -17,6 +19,9 @@ def game(screen, settings):
                 play_music = True
             else:
                 play_music = False
+
+        if opt == 'username':
+            username = key
 
         # Other options
 
@@ -60,6 +65,8 @@ def game(screen, settings):
         # Рисуем использованные фигуры
         for figure in used_figures:
             figure.draw()
+
+        draw_enemy_board(enemy_board_data)
 
         # Рисуем текущую фигуру
         current_figure.draw()
@@ -146,22 +153,88 @@ def game(screen, settings):
         if event.key == pygame.K_LEFT:  # Двигаем фигуру влево
             current_figure.move_left()
             update_display()
+            message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
+                                                                                    current_figure, board.width,
+                                                                                    board.height))
 
         if event.key == pygame.K_RIGHT:  # Двигаем фигуру вправо
             current_figure.move_right()
             update_display()
+            message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
+                                                                                    current_figure, board.width,
+                                                                                    board.height))
 
         if event.key == pygame.K_DOWN:  # Двигаем фигуру вниз
             current_figure.move_down()
             update_display()
+            message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
+                                                                                    current_figure, board.width,
+                                                                                    board.height))
 
         if event.key == pygame.K_a:  # Поворачиваем фигуру на 90 градусов против часовой
             current_figure.rotate_to_left()
             update_display()
+            message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
+                                                                                    current_figure, board.width,
+                                                                                    board.height))
 
         if event.key == pygame.K_s:  # Поворачиваем фигуру на 90 градусов по часовой
             current_figure.rotate_to_right()
             update_display()
+            message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
+                                                                                    current_figure, board.width,
+                                                                                    board.height))
+
+    def make_board_matrix(list_of_figures, current_figure, width, height):
+        """Составляет матрицу поля для отправки"""
+
+        matrix = [['.'] * width for _ in range(height)]
+
+        for figure in list_of_figures:
+            for x, y in figure.chosen_points:
+                if figure.top + y < 0:
+                    continue
+                matrix[figure.top + y][figure.left + x] = figure.text_color
+
+        if current_figure:
+            for x, y in current_figure.chosen_points:
+                if current_figure.top + y < 0:
+                    continue
+                matrix[current_figure.top + y][current_figure.left + x] = current_figure.text_color
+
+        for i in range(len(matrix)):
+            matrix[i] = ''.join(matrix[i])
+
+        return ';'.join(matrix)
+
+    def draw_enemy_board(field):
+        """Рисует поле соперника по заданной матрице"""
+
+        # Задаём отступы
+        x_space = enemy_board.left_space * enemy_board.size
+        y_space = enemy_board.top_space * enemy_board.size
+
+        pygame.draw.rect(screen, pygame.Color('white'), [x_space, y_space, enemy_board.width * enemy_board.size,
+                                                         enemy_board.height * enemy_board.size])
+
+        for x in range(len(field[0])):
+            for y in range(len(field)):
+                if field[y][x] == '.':  # Если клетка свободна
+                    continue
+                else:
+                    pygame.draw.rect(screen, letter_to_color[field[y][x]], [x_space + x * board.size,
+                                                                   y_space + y * board.size, board.size, board.size])
+
+        enemy_board.draw()
+
+    def receive_messages(client):
+        if client.received:  # Если есть непрочитанные сообщения
+            field = client.received.split(';')  # Получение данных
+
+            # Нет непрочитанных сообщений
+            client.received = None
+
+            return field
 
     clock = pygame.time.Clock()
     fps = 200
@@ -171,6 +244,20 @@ def game(screen, settings):
     figure_added = 0
 
     board = Board(10, 20, 25, 3, 1, screen)
+
+    enemy_board = board.copy()
+    enemy_board.left_space = 25
+    enemy_board.top_space = 1
+    enemy_board_data = make_board_matrix([], None, board.width, board.height).split(';')
+
+    # Экземпляр класса для отправки сообщений
+    message_sender_and_receiver = MessageSenderAndReceiver()
+    enemy = input()
+    message_sender_and_receiver.send_message('registration:{}'.format(username))
+    message_sender_and_receiver.send_message('start_game_with:{}'.format(enemy))
+
+    while not message_sender_and_receiver.found_a_pair:
+        pass
 
     # Загружаем мелодии
     lose_sound = pygame.mixer.Sound('sounds/lose.wav')
@@ -188,8 +275,13 @@ def game(screen, settings):
     something_left = Figure(3, 2, pygame.Color('red'), 'r', board.size, [(0, 1), (1, 1), (1, 0), (2, 0)], board, screen)
     something_right = Figure(3, 2, pygame.Color('green'), 'g', board.size, [(0, 0), (1, 0), (1, 1), (2, 1)], board, screen)
     t_letter = Figure(3, 2, pygame.Color('purple'), 'p', board.size, [(0, 0), (1, 0), (2, 0), (1, 1)], board, screen)
-    l_letter_left = Figure(2, 3, pygame.Color('pink'), 'pi', board.size, [(0, 0), (0, 1), (0, 2), (1, 2)], board, screen)
+    l_letter_left = Figure(2, 3, pygame.Color('pink'), 'i', board.size, [(0, 0), (0, 1), (0, 2), (1, 2)], board, screen)
     l_letter_right = Figure(2, 3, pygame.Color('orange'), 'o', board.size, [(1, 0), (1, 1), (1, 2), (0, 2)], board, screen)
+
+    # Словарь цветов для отрисовки поля врага
+    letter_to_color = {'r': pygame.Color('red'), 'y': pygame.Color('yellow'), 'g': pygame.Color('green'),
+                       'p': pygame.Color('purple'), 'i': pygame.Color('pink'),
+                       'o': pygame.Color('orange'), 'b': pygame.Color('#42aaff')}
 
     # Из этого списка будут выбираться фигуры для вывода на экран
     possible_figures = [square, stick, something_left, something_right, t_letter, l_letter_left,
@@ -216,6 +308,7 @@ def game(screen, settings):
 
     running = True
     while running:  # Основной игровой цикл
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate(True)
@@ -223,7 +316,18 @@ def game(screen, settings):
             if event.type == pygame.KEYDOWN:
                 manage_with_event(event)
 
+        field_to_draw = receive_messages(message_sender_and_receiver)
+
+        if field_to_draw:
+            enemy_board_data = field_to_draw
+
+        draw_enemy_board(enemy_board_data)
+        pygame.display.update()
+
         if frames_done >= 200:  # Каждые 200 итераций обновляем картинку
+            # Отправляем данные противнику
+            message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
+                                                                       current_figure, board.width, board.height))
 
             # Если мы не можем никуда пойти, то появляется новая фигура
             if not (current_figure.can_move and current_figure.move()):

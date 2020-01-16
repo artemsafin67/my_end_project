@@ -26,3 +26,6 @@ class Board:
             start = (self.left_space * self.size, (y + self.top_space) * self.size)
             end = ((self.width + self.left_space) * self.size, (y + self.top_space) * self.size)
             pygame.draw.line(self.screen, pygame.Color('#423189'), start, end, 3)
+
+    def copy(self):
+        return Board(self.width, self.height, self.size, self.left_space, self.top_space, self.screen)

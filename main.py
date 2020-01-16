@@ -1,5 +1,6 @@
 from game import game
 from button import Button
+from net_game import net_game
 import settings
 import pygame
 import sys
@@ -21,8 +22,8 @@ start_game = Button(game, 450, 100, 300, 60, 'Новая игра', 78,
                     pygame.Color('pink'), screen, *(screen, settings_config),
                     border_color=pygame.Color('white'))
 
-net_game = Button(None, 450, 250, 300, 60, 'Игра по сети', 70,
-                  pygame.Color('pink'), screen,
+net_game = Button(net_game, 450, 250, 300, 60, 'Игра по сети', 70,
+                  pygame.Color('pink'), screen, *(screen, settings_config),
                   border_color=pygame.Color('white'))
 
 settings_label = Button(settings.settings, 450, 400, 300, 60, 'Настройки', 82,

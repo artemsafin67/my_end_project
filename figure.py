@@ -4,7 +4,7 @@ from copy import deepcopy
 
 
 class Figure:
-    def __init__(self, width, height, color, size, chosen_points, board, screen):
+    def __init__(self, width, height, color, text_color, size, chosen_points, board, screen):
         self.left = randrange(0, board.width - 1 - width)  # Левая позиция клетки относительно поля board
         self.top = -height  # Верхняя позиция клетки относительно поля board
         self.width = width  # Ширина фигуры
@@ -16,6 +16,7 @@ class Figure:
         self.field = [[0 for _ in range(self.width)] for _ in range(self.height)]
 
         self.color = color  # Цвет фигуры
+        self.text_color = text_color  # Цвет фигуры в виде текста
         self.size = size  # Размер клетки
         self.chosen_points = chosen_points  # Выбранные точки внутри прямоугольника
         self.can_move = True  # Состояние, когда фигуру можно двигать
@@ -25,7 +26,7 @@ class Figure:
 
     def copy(self):
         """Копирует себя, но с верхним углом в позиции -2 (для постепенного вывода фигуры на экран)"""
-        return Figure(self.width, self.height, self.color, self.size, self.chosen_points, self.board,
+        return Figure(self.width, self.height, self.color, self.text_color, self.size, self.chosen_points, self.board,
                       self.screen)
 
     def rotate_to_left(self):
@@ -81,13 +82,13 @@ class Figure:
         """Двигаем фигуру на одну клетку вправо"""
 
         # Мы не должны выходить за пределы поля
-        if self.top >= 0 and self.can_move and self.left + self.width < self.board.width and not self.collide_from_right():
+        if self.can_move and self.left + self.width < self.board.width and not self.collide_from_right():
             self.left += 1
 
     def move_left(self):
         """Двигаем фигуру на одну клетку влево"""
 
-        if self.top >= 0 and self.can_move and self.left > 0 and not self.collide_from_left():
+        if self.can_move and self.left > 0 and not self.collide_from_left():
             self.left -= 1
 
     def move_down(self):
