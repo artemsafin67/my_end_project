@@ -49,13 +49,15 @@ def game(screen, settings):
         # Рисуем текущие результаты
         x_coord = (board.left_space + board.width) * board.size + 50
 
+        screen.blit(record_label, (x_coord, 210))
+        screen.blit(current_score_label, (x_coord, 330))
+        screen.blit(current_level_label, (x_coord, 450))
+
+        # Рисуем следующую фигуру
         figure_to_draw.draw_next_in_the_rect(x_coord + 75, board.size * 2)
         board_to_draw_figure_on = Board(figure_to_draw.width, figure_to_draw.height,
                                         figure_to_draw.size, x_coord + 75, board.size * 2, figure_to_draw.screen, True)
         board_to_draw_figure_on.draw()
-        screen.blit(record_label, (x_coord, 210))
-        screen.blit(current_score_label, (x_coord, 330))
-        screen.blit(current_level_label, (x_coord, 450))
 
         # Рисуем использованные фигуры
         for figure in used_figures:

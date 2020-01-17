@@ -1,6 +1,7 @@
 import socket
 import threading
 
+
 class MessageSenderAndReceiver:
 
     def __init__(self):
@@ -30,23 +31,27 @@ class MessageSenderAndReceiver:
     def receive_messages(self):
         try:
             while True:
-                if not self.can_work:
+                if not self.can_work:  # Если мы закрыли сокет
                     continue
 
-                received_message = self.sock.recv(1024).decode('utf-8')
+                received_message = self.sock.recv(1024).decode('utf-8')  # Получаем сообщение
+
+                # В зависимости от типа сообщения
                 if 'connected' in received_message:
-                    self.found_a_pair = True
+                    self.found_a_pair = True  # Мы нашли пару
 
                 if 'data:' in received_message:
-                    self.received = received_message.split(':')[1]
+                    self.received = received_message.split(':')[1]  # Теперь у нас есть необработанные сообщения
 
         except OSError:  # Если мы закрыли сокет
             return
 
     def send_message(self, message):
+        """Отправляет сообщение на сервер"""
         info = bytes(message, encoding='utf-8')
         self.sock.sendto(info, self.server_address_to_send_messages)
 
     def close(self):
+        """Закрывает текущий сокет"""
         self.sock.close()
         self.can_work = False

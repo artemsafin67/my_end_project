@@ -1,10 +1,12 @@
 from settings_buttons import SettingsButtonWithOptions, SettingsButtonWithTextEnter
+from button import Button
+from client import MessageSenderAndReceiver
 import pygame
 import sys
 
 
 def settings(screen, background_image):
-    global buttons
+    global buttons, username
 
     settings_config = read_settings()  # Тут хранятся ранее сохраненные настройки
 
@@ -24,7 +26,10 @@ def settings(screen, background_image):
                                            screen=screen, parameter_for_file='username',
                                            border_color=pygame.Color('white'))
 
-    buttons = [music_is_on, username]  # Список кнопок-настройщиков
+    register = Button(func=register_username, x=300, y=300, width=600, height=40, text='Регистрация',
+                      size=50, color=pygame.Color('pink'), screen=screen, border_color=pygame.Color('white'))
+
+    buttons = [music_is_on, username, register]  # Список кнопок-настройщиков
 
     # Выводим все кнопки на экран
     screen.blit(background_image, (0, 0))
@@ -101,3 +106,10 @@ def save_changes():
         settings_config_file.write('{}:{}\n'.format(a, b))
 
     settings_config_file.close()
+
+
+def register_username():
+    """Отправляем запрос на регистрацию"""
+
+    message_sender_and_receiver = MessageSenderAndReceiver()
+    message_sender_and_receiver.send_message('registration:{}'.format(username.current_var))

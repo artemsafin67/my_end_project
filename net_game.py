@@ -29,12 +29,14 @@ def net_game(screen, settings):
         """Выход из программы"""
         nonlocal running
 
-        if int(record) < int(current_score):
+        if int(record) < int(current_score):  # Обновляем рекорд
             record_file.close()
             new = open('record.txt', 'w')
             new.write(current_score)
             new.close()
 
+        # Удаляем запрос и закрываем сокет
+        message_sender_and_receiver.send_message('cancel_invitation')
         message_sender_and_receiver.close()
 
         running = False
@@ -43,15 +45,22 @@ def net_game(screen, settings):
             sys.exit()
 
     def draw_all_for_enemy(enemy_board_data, enemy_score, enemy_level):
+        """Рисуем все для врага"""
+
         x_space = enemy_board.left_space * enemy_board.size
         y_space = enemy_board.top_space * enemy_board.size
+
+        # Отрисовка поля
         pygame.draw.rect(screen, pygame.Color('white'), [x_space, y_space, enemy_board.width * enemy_board.size + 400,
                                                          enemy_board.height * enemy_board.size + 400])
         draw_enemy_board(enemy_board_data)
 
+        # Отрисовка данных
+        enemy_name_label = font.render(enemy_name, 1, pygame.Color('red'))
         enemy_score_label = font.render('Счёт: ' + enemy_score, 1, pygame.Color('#42aaff'))
         enemy_level_label = font.render('Уровень: ' + enemy_level, 1, pygame.Color('green'))
 
+        screen.blit(enemy_name_label, (980, 210))
         screen.blit(enemy_score_label, (980, 330))
         screen.blit(enemy_level_label, (980, 450))
 
@@ -69,10 +78,13 @@ def net_game(screen, settings):
         # Рисуем текущие результаты
         x_coord = (board.left_space + board.width) * board.size + 50
 
+        # Рисуем следующую фигуру
         figure_to_draw.draw_next_in_the_rect(x_coord + 75, board.size * 2)
         board_to_draw_figure_on = Board(figure_to_draw.width, figure_to_draw.height,
                                         figure_to_draw.size, x_coord + 75, board.size * 2, figure_to_draw.screen, True)
         board_to_draw_figure_on.draw()
+
+        # Отрисовка данных
         screen.blit(record_label, (x_coord, 210))
         screen.blit(current_score_label, (x_coord, 330))
         screen.blit(current_level_label, (x_coord, 450))
@@ -81,7 +93,7 @@ def net_game(screen, settings):
         for figure in used_figures:
             figure.draw()
 
-        draw_all_for_enemy(enemy_board_data, enemy_score, enemy_level)
+        draw_all_for_enemy(enemy_board_data, enemy_score, enemy_level)  # рисуеум все для врага
 
         # Рисуем текущую фигуру
         current_figure.draw()
@@ -165,45 +177,27 @@ def net_game(screen, settings):
     def manage_with_event(event):
         # В зависимости от типа события двигаем фигуру
 
+        done = False  # Флаг, для проверки делания хода
         if event.key == pygame.K_LEFT:  # Двигаем фигуру влево
             current_figure.move_left()
-            update_display()
-            message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
-                                                                                    current_figure, board.width,
-                                                                                    board.height)
-                                                     + '!!!' + current_score + '!!!' + current_level)
 
         if event.key == pygame.K_RIGHT:  # Двигаем фигуру вправо
             current_figure.move_right()
-            update_display()
-            message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
-                                                                                    current_figure, board.width,
-                                                                                    board.height)
-                                                     + '!!!' + current_score + '!!!' + current_level)
 
         if event.key == pygame.K_DOWN:  # Двигаем фигуру вниз
             current_figure.move_down()
-            update_display()
-            message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
-                                                                                    current_figure, board.width,
-                                                                                    board.height)
-                                                     + '!!!' + current_score + '!!!' + current_level)
 
         if event.key == pygame.K_a:  # Поворачиваем фигуру на 90 градусов против часовой
             current_figure.rotate_to_left()
-            update_display()
-            message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
-                                                                                    current_figure, board.width,
-                                                                                    board.height)
-                                                     + '!!!' + current_score + '!!!' + current_level)
 
         if event.key == pygame.K_s:  # Поворачиваем фигуру на 90 градусов по часовой
             current_figure.rotate_to_right()
+
+        if done:
             update_display()
-            message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
-                                                                                    current_figure, board.width,
-                                                                                    board.height)
-                                                     + '!!!' + current_score + '!!!' + current_level)
+            message_sender_and_receiver.send_message(
+                'message:' + make_board_matrix(used_figures, current_figure, board.width, board.height)
+                + '!!!' + current_score + '!!!' + current_level)
 
     def make_board_matrix(list_of_figures, current_figure, width, height):
         """Составляет матрицу поля для отправки"""
@@ -247,7 +241,7 @@ def net_game(screen, settings):
 
     def receive_messages(client):
         if client.received:  # Если есть непрочитанные сообщения
-            field, score, level = client.received.split('!!!')  # Получение данных
+            field, score, level = client.received.split('!!!')  # Получение данных поля, счёта и уровня
             field = field.split(';')
 
             # Нет непрочитанных сообщений
@@ -255,27 +249,35 @@ def net_game(screen, settings):
 
             return field, score, level
 
-        return (False, False, False)
+        return (False, False, False)  # Если нет непрочитанных сообщений
 
     def get_enemy_name():
+        """Пользователь вводит имя соперника"""
+
+        # Рисуем галочку и крестик
         tick = pygame.image.load('tick.png')
         cross = pygame.image.load('cross.jpg')
 
+        # Задаём rect у галочки и крестика
         tick_rect = tick.get_rect()
         tick_rect.left = 250
         tick_rect.top = 250
+
         cross_rect = cross.get_rect()
         cross_rect.left = 900
         cross_rect.top = 250
 
+        # Фоновое изображение
         bg = pygame.image.load('background.jpg')
         bg = pygame.transform.scale(bg, (width, height))
 
+        # Кнопка для ввода имени
         enemy_name_enter = SettingsButtonWithTextEnter(None, 250, 200, 700, 50, 'Имя соперника',
                                                        '', 70, pygame.Color('pink'), screen,
                                                        parameter_for_file='enemy',
                                                        border_color=pygame.Color('white'))
 
+        # Отрисовываем изображения
         screen.blit(bg, (0, 0))
         enemy_name_enter.draw_button()
         screen.blit(tick, (250, 250))
@@ -286,8 +288,9 @@ def net_game(screen, settings):
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
-                    enemy_name_enter.manage_event(event)
+                    enemy_name_enter.manage_event(event)  # Изменяем текст кнопки
 
+                    # Обновляем дисплей
                     screen.blit(bg, (0, 0))
                     enemy_name_enter.draw_button()
                     screen.blit(tick, (250, 250))
@@ -297,27 +300,27 @@ def net_game(screen, settings):
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
 
-                    if tick_rect.collidepoint(event.pos):
+                    if tick_rect.collidepoint(event.pos):  # Если нажали на галочку, то мы нашли имя соперника
                         return enemy_name_enter.current_var, cross_rect
 
-                    if cross_rect.collidepoint(event.pos):
+                    if cross_rect.collidepoint(event.pos):  # Выходим из цикла
                         return False, False
 
     def search_for_enemy(name, cross_rect):
-        if not name:
+        if not name:  # Если на нажали на крестик, то искать некого
             return False
 
-        message_sender_and_receiver.send_message('start_game_with:{}'.format(name))
+        message_sender_and_receiver.send_message('start_game_with:{}'.format(name))  # Отправляем запрос на игру
 
-        while not message_sender_and_receiver.found_a_pair:
+        while not message_sender_and_receiver.found_a_pair:  # Пока не нашли пару
 
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    if cross_rect.collidepoint(event.pos):
+                    if cross_rect.collidepoint(event.pos):  # Если нажали на крестик
                         message_sender_and_receiver.send_message('cancel_invitation')
                         return False
 
-        return True
+        return name
 
     clock = pygame.time.Clock()
     fps = 200
@@ -339,10 +342,9 @@ def net_game(screen, settings):
 
     # Экземпляр класса для отправки сообщений
     message_sender_and_receiver = MessageSenderAndReceiver()
+    enemy_name = search_for_enemy(*get_enemy_name())
 
-    result = search_for_enemy(*get_enemy_name())
-
-    if not result:
+    if not enemy_name:
         message_sender_and_receiver.close()
         return
 
@@ -412,15 +414,15 @@ def net_game(screen, settings):
             enemy_level = level
             enemy_score = score
 
+        # Отрисовываем экран соперника
         draw_all_for_enemy(enemy_board_data, enemy_score, enemy_level)
         pygame.display.update()
 
         if frames_done >= 200:  # Каждые 200 итераций обновляем картинку
             # Отправляем данные противнику
-            message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
-                                                                                    current_figure, board.width,
-                                                                                    board.height)
-                                                     + '!!!' + current_score + '!!!' + current_level)
+            message_sender_and_receiver.send_message(
+                'message:' + make_board_matrix(used_figures, current_figure, board.width, board.height)
+                + '!!!' + current_score + '!!!' + current_level)
 
             # Если мы не можем никуда пойти, то появляется новая фигура
             if not (current_figure.can_move and current_figure.move()):

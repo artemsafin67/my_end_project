@@ -4,6 +4,7 @@ from net_game import net_game
 import settings
 import pygame
 import sys
+import solver
 
 # Настройка экрана
 size = width, height = 1200, 600
@@ -30,7 +31,7 @@ settings_label = Button(settings.settings, 450, 400, 300, 60, 'Настройк�
                         pygame.Color('pink'), screen, screen, background_image,
                         border_color=pygame.Color('white'))
 
-buttons = [start_game, net_game, settings_label]
+buttons = [start_game, net_game, settings_label]  # Список кнопок
 
 # Отрисовываем меню
 screen.blit(background_image, (0, 0))

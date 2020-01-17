@@ -1,2 +1,2 @@
-music:Нет
-username:ruslan
+music:Да
+username:

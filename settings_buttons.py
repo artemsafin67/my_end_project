@@ -63,11 +63,8 @@ class SettingsButtonWithTextEnter(Button):
                 self.change_text(self.setting, self.current_var)
 
     def manage_event(self, event):
+        """В зависимости от события KEYDOWN добавляет или убирает буквы"""
         if event.key == pygame.K_BACKSPACE:
             self.change_option('', False)
         else:
             self.change_option(event.unicode, True)
-
-
-
-
