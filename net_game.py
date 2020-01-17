@@ -5,8 +5,8 @@ def net_game(screen, settings):
     from board import Board
     from random import choice
     from client import MessageSenderAndReceiver
+    from settings_buttons import SettingsButtonWithTextEnter
     import sys
-    import threading
 
     pygame.init()
 
@@ -35,10 +35,25 @@ def net_game(screen, settings):
             new.write(current_score)
             new.close()
 
+        message_sender_and_receiver.close()
+
         running = False
         if kill:
             pygame.quit()
             sys.exit()
+
+    def draw_all_for_enemy(enemy_board_data, enemy_score, enemy_level):
+        x_space = enemy_board.left_space * enemy_board.size
+        y_space = enemy_board.top_space * enemy_board.size
+        pygame.draw.rect(screen, pygame.Color('white'), [x_space, y_space, enemy_board.width * enemy_board.size + 400,
+                                                         enemy_board.height * enemy_board.size + 400])
+        draw_enemy_board(enemy_board_data)
+
+        enemy_score_label = font.render('Счёт: ' + enemy_score, 1, pygame.Color('#42aaff'))
+        enemy_level_label = font.render('Уровень: ' + enemy_level, 1, pygame.Color('green'))
+
+        screen.blit(enemy_score_label, (980, 330))
+        screen.blit(enemy_level_label, (980, 450))
 
     def update_display():
         """Обновление игрового поля"""
@@ -66,7 +81,7 @@ def net_game(screen, settings):
         for figure in used_figures:
             figure.draw()
 
-        draw_enemy_board(enemy_board_data)
+        draw_all_for_enemy(enemy_board_data, enemy_score, enemy_level)
 
         # Рисуем текущую фигуру
         current_figure.draw()
@@ -155,35 +170,40 @@ def net_game(screen, settings):
             update_display()
             message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
                                                                                     current_figure, board.width,
-                                                                                    board.height))
+                                                                                    board.height)
+                                                     + '!!!' + current_score + '!!!' + current_level)
 
         if event.key == pygame.K_RIGHT:  # Двигаем фигуру вправо
             current_figure.move_right()
             update_display()
             message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
                                                                                     current_figure, board.width,
-                                                                                    board.height))
+                                                                                    board.height)
+                                                     + '!!!' + current_score + '!!!' + current_level)
 
         if event.key == pygame.K_DOWN:  # Двигаем фигуру вниз
             current_figure.move_down()
             update_display()
             message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
                                                                                     current_figure, board.width,
-                                                                                    board.height))
+                                                                                    board.height)
+                                                     + '!!!' + current_score + '!!!' + current_level)
 
         if event.key == pygame.K_a:  # Поворачиваем фигуру на 90 градусов против часовой
             current_figure.rotate_to_left()
             update_display()
             message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
                                                                                     current_figure, board.width,
-                                                                                    board.height))
+                                                                                    board.height)
+                                                     + '!!!' + current_score + '!!!' + current_level)
 
         if event.key == pygame.K_s:  # Поворачиваем фигуру на 90 градусов по часовой
             current_figure.rotate_to_right()
             update_display()
             message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
                                                                                     current_figure, board.width,
-                                                                                    board.height))
+                                                                                    board.height)
+                                                     + '!!!' + current_score + '!!!' + current_level)
 
     def make_board_matrix(list_of_figures, current_figure, width, height):
         """Составляет матрицу поля для отправки"""
@@ -214,27 +234,90 @@ def net_game(screen, settings):
         x_space = enemy_board.left_space * enemy_board.size
         y_space = enemy_board.top_space * enemy_board.size
 
-        pygame.draw.rect(screen, pygame.Color('white'), [x_space, y_space, enemy_board.width * enemy_board.size,
-                                                         enemy_board.height * enemy_board.size])
-
         for x in range(len(field[0])):
             for y in range(len(field)):
                 if field[y][x] == '.':  # Если клетка свободна
                     continue
                 else:
                     pygame.draw.rect(screen, letter_to_color[field[y][x]], [x_space + x * board.size,
-                                                                   y_space + y * board.size, board.size, board.size])
+                                                                            y_space + y * board.size, board.size,
+                                                                            board.size])
 
         enemy_board.draw()
 
     def receive_messages(client):
         if client.received:  # Если есть непрочитанные сообщения
-            field = client.received.split(';')  # Получение данных
+            field, score, level = client.received.split('!!!')  # Получение данных
+            field = field.split(';')
 
             # Нет непрочитанных сообщений
             client.received = None
 
-            return field
+            return field, score, level
+
+        return (False, False, False)
+
+    def get_enemy_name():
+        tick = pygame.image.load('tick.png')
+        cross = pygame.image.load('cross.jpg')
+
+        tick_rect = tick.get_rect()
+        tick_rect.left = 250
+        tick_rect.top = 250
+        cross_rect = cross.get_rect()
+        cross_rect.left = 900
+        cross_rect.top = 250
+
+        bg = pygame.image.load('background.jpg')
+        bg = pygame.transform.scale(bg, (width, height))
+
+        enemy_name_enter = SettingsButtonWithTextEnter(None, 250, 200, 700, 50, 'Имя соперника',
+                                                       '', 70, pygame.Color('pink'), screen,
+                                                       parameter_for_file='enemy',
+                                                       border_color=pygame.Color('white'))
+
+        screen.blit(bg, (0, 0))
+        enemy_name_enter.draw_button()
+        screen.blit(tick, (250, 250))
+        screen.blit(cross, (900, 250))
+
+        pygame.display.update()
+
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    enemy_name_enter.manage_event(event)
+
+                    screen.blit(bg, (0, 0))
+                    enemy_name_enter.draw_button()
+                    screen.blit(tick, (250, 250))
+                    screen.blit(cross, (900, 250))
+
+                    pygame.display.update()
+
+                if event.type == pygame.MOUSEBUTTONDOWN:
+
+                    if tick_rect.collidepoint(event.pos):
+                        return enemy_name_enter.current_var, cross_rect
+
+                    if cross_rect.collidepoint(event.pos):
+                        return False, False
+
+    def search_for_enemy(name, cross_rect):
+        if not name:
+            return False
+
+        message_sender_and_receiver.send_message('start_game_with:{}'.format(name))
+
+        while not message_sender_and_receiver.found_a_pair:
+
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if cross_rect.collidepoint(event.pos):
+                        message_sender_and_receiver.send_message('cancel_invitation')
+                        return False
+
+        return True
 
     clock = pygame.time.Clock()
     fps = 200
@@ -245,19 +328,23 @@ def net_game(screen, settings):
 
     board = Board(10, 20, 25, 3, 1, screen)
 
+    # Создаём все необходимое для отрисовки поля соперника
     enemy_board = board.copy()
     enemy_board.left_space = 25
     enemy_board.top_space = 1
+
     enemy_board_data = make_board_matrix([], None, board.width, board.height).split(';')
+    enemy_score = '0'
+    enemy_level = '1'
 
     # Экземпляр класса для отправки сообщений
     message_sender_and_receiver = MessageSenderAndReceiver()
-    enemy = input()
-    message_sender_and_receiver.send_message('registration:{}'.format(username))
-    message_sender_and_receiver.send_message('start_game_with:{}'.format(enemy))
 
-    while not message_sender_and_receiver.found_a_pair:
-        pass
+    result = search_for_enemy(*get_enemy_name())
+
+    if not result:
+        message_sender_and_receiver.close()
+        return
 
     # Загружаем мелодии
     lose_sound = pygame.mixer.Sound('sounds/lose.wav')
@@ -273,10 +360,12 @@ def net_game(screen, settings):
     square = Figure(2, 2, pygame.Color('yellow'), 'y', board.size, [(0, 0), (1, 0), (0, 1), (1, 1)], board, screen)
     stick = Figure(1, 4, pygame.Color('#42aaff'), 'b', board.size, [(0, 0), (0, 1), (0, 2), (0, 3)], board, screen)
     something_left = Figure(3, 2, pygame.Color('red'), 'r', board.size, [(0, 1), (1, 1), (1, 0), (2, 0)], board, screen)
-    something_right = Figure(3, 2, pygame.Color('green'), 'g', board.size, [(0, 0), (1, 0), (1, 1), (2, 1)], board, screen)
+    something_right = Figure(3, 2, pygame.Color('green'), 'g', board.size, [(0, 0), (1, 0), (1, 1), (2, 1)], board,
+                             screen)
     t_letter = Figure(3, 2, pygame.Color('purple'), 'p', board.size, [(0, 0), (1, 0), (2, 0), (1, 1)], board, screen)
     l_letter_left = Figure(2, 3, pygame.Color('pink'), 'i', board.size, [(0, 0), (0, 1), (0, 2), (1, 2)], board, screen)
-    l_letter_right = Figure(2, 3, pygame.Color('orange'), 'o', board.size, [(1, 0), (1, 1), (1, 2), (0, 2)], board, screen)
+    l_letter_right = Figure(2, 3, pygame.Color('orange'), 'o', board.size, [(1, 0), (1, 1), (1, 2), (0, 2)], board,
+                            screen)
 
     # Словарь цветов для отрисовки поля врага
     letter_to_color = {'r': pygame.Color('red'), 'y': pygame.Color('yellow'), 'g': pygame.Color('green'),
@@ -316,18 +405,22 @@ def net_game(screen, settings):
             if event.type == pygame.KEYDOWN:
                 manage_with_event(event)
 
-        field_to_draw = receive_messages(message_sender_and_receiver)
+        field_to_draw, score, level = receive_messages(message_sender_and_receiver)
 
         if field_to_draw:
             enemy_board_data = field_to_draw
+            enemy_level = level
+            enemy_score = score
 
-        draw_enemy_board(enemy_board_data)
+        draw_all_for_enemy(enemy_board_data, enemy_score, enemy_level)
         pygame.display.update()
 
         if frames_done >= 200:  # Каждые 200 итераций обновляем картинку
             # Отправляем данные противнику
             message_sender_and_receiver.send_message('message:' + make_board_matrix(used_figures,
-                                                                       current_figure, board.width, board.height))
+                                                                                    current_figure, board.width,
+                                                                                    board.height)
+                                                     + '!!!' + current_score + '!!!' + current_level)
 
             # Если мы не можем никуда пойти, то появляется новая фигура
             if not (current_figure.can_move and current_figure.move()):

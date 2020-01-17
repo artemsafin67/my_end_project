@@ -8,6 +8,9 @@ class MessageSenderAndReceiver:
         self.received = None
         self.found_a_pair = False
 
+        # Указатель на то, что сокет работает
+        self.can_work = True
+
         # Создание сокета udp
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -25,14 +28,25 @@ class MessageSenderAndReceiver:
         thread.start()
 
     def receive_messages(self):
-        while True:
-            received_message = self.sock.recv(1024).decode('utf-8')
-            if 'connected' in received_message:
-                self.found_a_pair = True
+        try:
+            while True:
+                if not self.can_work:
+                    continue
 
-            if 'data:' in received_message:
-                self.received = received_message.split(':')[1]
+                received_message = self.sock.recv(1024).decode('utf-8')
+                if 'connected' in received_message:
+                    self.found_a_pair = True
+
+                if 'data:' in received_message:
+                    self.received = received_message.split(':')[1]
+
+        except OSError:  # Если мы закрыли сокет
+            return
 
     def send_message(self, message):
         info = bytes(message, encoding='utf-8')
         self.sock.sendto(info, self.server_address_to_send_messages)
+
+    def close(self):
+        self.sock.close()
+        self.can_work = False
