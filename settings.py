@@ -113,3 +113,4 @@ def register_username():
 
     message_sender_and_receiver = MessageSenderAndReceiver()
     message_sender_and_receiver.send_message('registration:{}'.format(username.current_var))
+    message_sender_and_receiver.close()
